@@ -1,25 +1,17 @@
 require 'openid'
 require 'openid/store/filesystem'
 require 'openid/extensions/ax'
-# The google federated login is based on Google's implementation of Open ID. 
-# http://code.google.com/apis/accounts/docs/OpenID.html
-# Google uses AX response instead of the Sreg response.
-#
-# This code is based on the original basic_openid strategy. I have modified the code to use AX response instead of SREG response.
-# Overwrite the on_sucess!, on_failure!, on_setup_needed!, and on_cancel! to customize events.
-#
-# == Requirments
-#
-# === Routes:
-#   :openid - an action that is accessilbe via http GET and protected via ensure_authenticated
-#
-# === Attributes
-#   :identity_url - A string for holding the identity_url associated with this user (overwritable)
-#
-# install the ruby-openid gem
 
 module Merb::Authentication::Strategies
   class GOpenID < Merb::Authentication::Strategy
+
+    # get the google or hosted domain's discovery url
+    def self.gafl_url
+      url = Merb::Plugins.config[:gafl][:base]
+      (domain = Merb::Plugins.config[:gafl][:domain]) ? (url + "site-xrds?hd=#{domain}") : (url + "id")
+    end
+
+    # the part of the strategy that actually gets executed
     def run!
       if request.params[:'openid.mode']
 	response = consumer.complete(request.send(:query_params), "#{request.protocol}://#{request.host}" + request.path)
@@ -38,7 +30,6 @@ module Merb::Authentication::Strategies
 	end
       elsif identity_url = params[:openid_url]
 	begin
-	  debugger
 	  openid_request = consumer.begin(identity_url)
 	  openid_ax = ::OpenID::AX::FetchRequest.new
 	  email_attr = ::OpenID::AX::AttrInfo.new('http://schema.openid.net/contact/email', 'email', true)

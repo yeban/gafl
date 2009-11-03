@@ -3,8 +3,7 @@ if defined?(Merb::Plugins)
 
   # Merb gives you a Merb::Plugins.config hash...feel free to put your stuff in your piece of it
   Merb::Plugins.config[:gafl] = {
-    :domain => 'site-xrds?hd=intellecap.net',
-    :identity_url => 'https://www.google.com/accounts/o8/id'
+    :base =>  'https://www.google.com/accounts/o8/'
   }
 
   path = "#{File.expand_path(File.dirname(__FILE__))}/gafl/strategy.rb"
