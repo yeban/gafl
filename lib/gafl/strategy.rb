@@ -44,7 +44,7 @@ module Merb::Authentication::Strategies
 
     # add Attribute Exchange fetch request message to the request
     # redefine to add more attributes
-    def add_ax_fetch_request(openid_request)
+    def add_ax_fetch_request!(openid_request)
       ax_request = ::OpenID::AX::FetchRequest.new
 
       # add attributes to the fetch request message
@@ -57,23 +57,23 @@ module Merb::Authentication::Strategies
 
     # next five methods add exchange attributes to the AX request
     def add_email!(ax_request)
-      openid_ax.add(::OpenID::AX::AttrInfo.new('http://schema.openid.net/contact/email', 'email', true))
+      ax_request.add(::OpenID::AX::AttrInfo.new('http://schema.openid.net/contact/email', 'email', true))
     end
 
     def add_first_name!(ax_request)
-      openid_ax.add(::OpenID::AX::AttrInfo.new('http://axschema.org/namePerson/first', 'fname', true))
+      ax_request.add(::OpenID::AX::AttrInfo.new('http://axschema.org/namePerson/first', 'fname', true))
     end
 
     def add_last_name!(ax_request)
-      openid_ax.add(::OpenID::AX::AttrInfo.new('http://axschema.org/namePerson/last', 'lname', true))
+      ax_request.add(::OpenID::AX::AttrInfo.new('http://axschema.org/namePerson/last', 'lname', true))
     end
 
     def add_country!(ax_request)
-      openid_ax.add(::OpenID::AX::AttrInfo.new('http://axschema.org/contact/country/home', 'country', true))
+      ax_request.add(::OpenID::AX::AttrInfo.new('http://axschema.org/contact/country/home', 'country', true))
     end
 
     def add_language!(ax_request)
-      openid_ax.add(::OpenID::AX::AttrInfo.new('http://axschema.org/pref/language', 'language', true))
+      ax_request.add(::OpenID::AX::AttrInfo.new('http://axschema.org/pref/language', 'language', true))
     end
 
     # next five functions return attributes from the AX response
@@ -121,7 +121,7 @@ module Merb::Authentication::Strategies
       nil
     end
 
-    def openid_callck_url
+    def openid_callback_url
       "#{request.protocol}://#{request.host}#{Merb::Router.url(:openid)}"
     end
 
