@@ -28,13 +28,10 @@ module Merb::Authentication::Strategies
 	when 'cancel'
 	  on_cancel!(response)
 	end
-      elsif identity_url = params[:openid_url]
+      elsif openid_url = params[:openid_url]
 	begin
-	  openid_request = consumer.begin(identity_url)
-	  openid_ax = ::OpenID::AX::FetchRequest.new
-	  email_attr = ::OpenID::AX::AttrInfo.new('http://schema.openid.net/contact/email', 'email', true)
-	  openid_ax.add(email_attr)
-	  openid_request.add_extension(openid_ax)
+	  openid_request = consumer.begin(openid_url)
+	  add_ax_fetch_request!(openid_request)
 	  redirect!(openid_request.redirect_url("#{request.protocol}://#{request.host}", openid_callback_url))
 	rescue ::OpenID::OpenIDError => e
 	  request.session.authentication.errors.clear!
@@ -45,91 +42,102 @@ module Merb::Authentication::Strategies
     end # run!
 
 
-    # Overwrite this to add extra options to the OpenID request before it is made.
-    # 
-    # @example request.return_to_args["remember_me"] = 1 # remember_me=1 is added when returning from the OpenID provider.
-    # 
-    # @api overwritable
-    def customize_openid_request!(openid_request)
+    # add Attribute Exchange fetch request message to the request
+    # redefine to add more attributes
+    def add_ax_fetch_request(openid_request)
+      ax_request = ::OpenID::AX::FetchRequest.new
+
+      # add attributes to the fetch request message
+      add_email!(ax_request)
+      add_first_name!(ax_request)
+      add_last_name!(ax_request)
+
+      openid_request.add_extension(ax_request)
     end
 
-    # Used to define the callback url for the openid provider.  By default it
-    # is set to the named :openid route.
-    # 
-    # @api overwritable
-    def openid_callback_url
-      "#{request.protocol}://#{request.host}#{Merb::Router.url(:openid)}"
+    # next five methods add exchange attributes to the AX request
+    def add_email!(ax_request)
+      openid_ax.add(::OpenID::AX::AttrInfo.new('http://schema.openid.net/contact/email', 'email', true))
     end
 
-    # Overwrite the on_success! method with the required behavior for successful logins
-    #
-    # @api overwritable
+    def add_first_name!(ax_request)
+      openid_ax.add(::OpenID::AX::AttrInfo.new('http://axschema.org/namePerson/first', 'fname', true))
+    end
+
+    def add_last_name!(ax_request)
+      openid_ax.add(::OpenID::AX::AttrInfo.new('http://axschema.org/namePerson/last', 'lname', true))
+    end
+
+    def add_country!(ax_request)
+      openid_ax.add(::OpenID::AX::AttrInfo.new('http://axschema.org/contact/country/home', 'country', true))
+    end
+
+    def add_language!(ax_request)
+      openid_ax.add(::OpenID::AX::AttrInfo.new('http://axschema.org/pref/language', 'language', true))
+    end
+
+    # next five functions return attributes from the AX response
+    def email(ax_response)
+      ax_response.data["http://schema.openid.net/contact/email"]
+    end
+
+    def first_name(ax_response)
+      ax_response.data["http://schema.openid.net/contact/email"]
+    end
+
+    def last_name(ax_response)
+      ax_response.data["http://schema.openid.net/contact/email"]
+    end
+
+    def country(ax_response)
+      ax_response.data["http://schema.openid.net/contact/email"]
+    end
+
+    def language(ax_response)
+      ax_response.data["http://schema.openid.net/contact/email"]
+    end
+
+    # next four methods describe what to do on a success, failure... events
+    # can be redefined
     def on_success!(response, ax_response)
-      email=ax_response.data["http://schema.openid.net/contact/email"]
-      if user = find_user_by_email(email)
-	user
-      else
-	nick = email.to_s.sub(/\@\w+\.\w+/,'')
-	user = user_class.new({:email => email, :nick => nick})
-	user.save
-	user
-      end
+      find_user_by_email(email(ax_response))
     end
 
-    # Overwrite the on_failure! method with the required behavior for failed logins
-    #
-    # @api overwritable
     def on_failure!(response)
       session.authentication.errors.clear!
       session.authentication.errors.add(:openid, 'OpenID verification failed, maybe the provider is down? Or the session timed out')
       nil
     end
 
-    #
-    # @api overwritable
     def on_setup_needed!(response)
       request.session.authentication.errors.clear!
       request.session.authentication.errors.add(:openid, 'OpenID does not seem to be configured correctly')
       nil
     end
 
-    #
-    # @api overwritable
     def on_cancel!(response)
       request.session.authentication.errors.clear!
       request.session.authentication.errors.add(:openid, 'OpenID rejected our request')
       nil
     end
 
-    #
-    # @api overwritable
-    def required_reg_fields
-      ['nickname', 'email']
+    def openid_callck_url
+      "#{request.protocol}://#{request.host}#{Merb::Router.url(:openid)}"
     end
 
-    #
-    # @api overwritable
-    def optional_reg_fields
-      ['fullname']
-    end
-
-    # Overwrite this to support an ORM other than DataMapper
-    #
-    # @api overwritable
+    # assumes an existing DataMapper User class
+    # redifine if required
     def find_user_by_email(email)
       user_class.first(:email => email)
-    end
-
-    # Overwrite this method to set your store
-    #
-    # @api overwritable
-    def openid_store
-      ::OpenID::Store::Filesystem.new("#{Merb.root}/tmp/openid")
     end
 
     private
     def consumer
       @consumer ||= ::OpenID::Consumer.new(request.session, openid_store)
+    end
+
+    def openid_store
+      ::OpenID::Store::Filesystem.new("#{Merb.root}/tmp/openid")
     end
 
   end # GOpenID
