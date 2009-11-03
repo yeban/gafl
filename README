@@ -1,4 +1,31 @@
 gafl
 ====
 
-A plugin for the Merb framework that provides ...
+A plugin for the Merb framework that provides Google and Google App Federated Login
+
+Needs:-
+1. ruby-openid
+2. merb-auth-more
+
+Steps:-
+1. Download and install the gem
+
+    sudo rake install
+
+2. Add it to the dependencies.rb file
+
+    dependency "gafl"
+
+3. In the controllers (app/controllers/exception.rb)
+
+      def unauthenticated
+	@openid_url = Merb::Authentication::Strategies::GOpenID.gafl_url
+	render
+      end
+
+4. In the views (app/views/exceptions/unauthenticated.html.haml)
+
+    %form{:action => url(:openid)}
+      %input{:name=>'openid_url', :value => @openid_url, :type=>'hidden'}
+      %input{:type => 'submit',:name => 'login', :value=>'Log in using Google'}
+
